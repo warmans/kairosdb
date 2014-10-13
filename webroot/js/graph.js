@@ -1,4 +1,4 @@
-var metricToTags = {};
+dataPointsQueryvar metricToTags = {};
 
 function displayQuery() {
 	var queryString = $('#query-hidden-text').val();

@@ -1,0 +1,54 @@
+@import "../../bower_components/bootstrap/less/bootstrap.less";
+
+/* override bootstrap */
+@grid-gutter-width:         10px;
+
+@navbar-margin-bottom: 5px;
+
+@text-color:            #999;
+
+@font-size-base:          11px;
+
+@border-radius-base:        0px;
+@border-radius-large:       0px;
+@border-radius-small:       0px;
+
+@input-bg:      #333;
+@input-border:  #333;
+@input-color:   @text-color;
+
+@input-group-addon-bg:           darken(@input-bg, 5%);
+@input-group-addon-border-color: @input-bg;
+
+@legend-color:                   @text-color;
+@legend-border-color:            #333;
+
+body {
+  background-color : #000;
+}
+
+legend {
+  font-size: (@font-size-base * 1.2);
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+/* bootstrap issues */
+ul.lm_tabs li {
+  -moz-box-sizing: content-box !important;
+}
+
+.component-inner {
+  padding : 10px;
+}
+
+/* forms */
+
+/* tree */
+treecontrol {
+  font-size: @font-size-base;
+}
+
+treecontrol  > ul > li {
+  padding : 0px;
+}

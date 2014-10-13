@@ -1,0 +1,250 @@
+<!doctype html>
+
+<html xmlns="http://www.w3.org/1999/html">
+    <head profile="http://www.w3.org/2005/10/profile">
+        <link rel="icon" type="image/png" href="img/favicon.png"/>
+
+        <link type="text/css" rel="stylesheet" href="//golden-layout.com/assets/css/goldenlayout-base.css" />
+        <link type="text/css" rel="stylesheet" href="//golden-layout.com/assets/css/goldenlayout-dark-theme.css" />
+        <link type="text/css" rel="stylesheet" href="/assets/dist/vendor.css" />
+        <link type="text/css" rel="stylesheet" href="/assets/dist/style.css" />
+    </head>
+    <body ng-app="kairosdb">
+
+        <nav class="navbar navbar-inverse" role="navigation">
+            <div class="container-fluid">
+                <!-- Brand and toggle get grouped for better mobile display -->
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="#">Kairos DB</a>
+                </div>
+                <button type="button" class="btn btn-success navbar-btn">Run</button>
+            </div><!-- /.container-fluid -->
+        </nav>
+
+        <template type="text/html" id="queryBuilderTemplate">
+            <div ng-controller="QueryBuilderController" class="component-inner">
+                <form role="form">
+                    <div class="form-group">
+                        <select class="form-control input-sm" ng-model="date_range_type">
+                            <option value="relative">Relative</option>
+                            <option value="absolute">Absolute</option>
+                        </select>
+                    </div>
+                    <div ng-show="date_range_type === 'absolute'">
+                        <div class="form-group">
+                            <label for="from-abs">From:</label>
+                            <input type="text" class="form-control input-sm" id="from-abs" name="from-abs" placeholder="2014-01-01">
+                        </div>
+                        <div class="form-group">
+                            <label for="to-abs">To:</label>
+                            <input type="text" class="form-control input-sm" id="to-abs" name="to-abs" placeholder="2014-01-01">
+                        </div>
+                    </div>
+                    <div ng-show="date_range_type === 'relative'">
+                        <label>From:</label>
+                        <div class="row form-group">
+                            <div class="col-lg-2">
+                                <input type="text"  class="form-control input-sm" id="from-rel-interval" name="from-rel-unit" placeholder="e.g. 1" value="1">
+                            </div>
+                            <div class="col-lg-10">
+                                <div class="input-group">
+                                    <select class="form-control input-sm" id="from-rel-unit" name="from-rel-unit">
+                                        <option value="seconds">Seconds</option>
+                                        <option value="minutes">Minutes</option>
+                                        <option selected value="hours">Hours</option>
+                                        <option value="days">Days</option>
+                                    </select>
+                                    <div class="input-group-addon">Ago</div>
+                                </div>
+                            </div>
+                        </div>
+                        <label>To:</label>
+                        <div class="row form-group">
+                            <div class="col-lg-2">
+                                <input type="text" class="form-control input-sm" id="to-rel-interval" name="to-rel-unit">
+                            </div>
+                            <div class="col-lg-10">
+                                <div class="input-group">
+                                    <select class="form-control input-sm" id="to-rel-unit" name="from-rel-unit">
+                                        <option value="seconds">Seconds</option>
+                                        <option value="minutes">Minutes</option>
+                                        <option selected value="hours">Hours</option>
+                                        <option value="days">Days</option>
+                                    </select>
+                                    <div class="input-group-addon">Ago</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button ng-click="runQuery()" class="btn btn-success">Run</button>
+                    <button ng-click="runQuery()" class="btn btn-primary">Save</button>
+                    <button ng-click="runQuery()" class="btn btn-primary">Get Query</button>
+                </form>
+            </div>
+        </template>
+
+        <template type="text/html" id="metricSelectionTemplate">
+            <div ng-controller="MetricSelectionController" class="component-inner">
+                <button ng-click="addMetric()" class="btn btn-success">+ Select</button>
+            </div>
+        </template>
+
+        <template type="text/html" id="metricOptionsTemplate">
+            <div ng-controller="MetricOptionsController" class="component-inner">
+
+            </div>
+        </template>
+
+        <template type="text/html" id="queryResultTemplate">
+            <div ng-controller="QueryResultController">
+                result
+            </div>
+        </template>
+
+        <script type="text/javascript" src="/assets/dist/kairosdb.js"></script>
+
+        <script src="js/kairosdb.js"></script>
+        <script src="js/kairosdb-query.js"></script>
+        <script src="js/kairosdb-flot.js"></script>
+
+        <script src="js/jquery.flot.min.js"></script>
+        <script src="js/jquery.flot.time.js"></script>
+        <script src="js/jquery.flot.selection.js"></script>
+        <script src="js/jquery.flot.resize.js"></script>
+
+        <script type="text/javascript">
+        (function() {
+
+            var app = angular.module('kairosdb', ['treeControl']);
+
+            app.controller('QueryBuilderController', ['$scope', '$timeout', 'container', 'state', function( $scope, $timeout, container, state ) {
+
+                $scope.date_range_type = 'relative';
+
+                $scope.runQuery = function() {
+
+                    var newItemConfig = {
+                        title: 'result...',
+                        type: 'component',
+                        componentName: 'angularModule',
+                        componentState: {
+                            module: 'kairosdb',
+                            templateId: 'queryResultTemplate'
+                        }
+                    };
+
+                    container.layoutManager.root.contentItems[0].contentItems[1].addChild( newItemConfig );
+                };
+            }]);
+
+            app.controller('MetricOptionsController', ['$scope', '$timeout', 'container', 'state', function( $scope, $timeout, container, state ) {
+
+            }]);
+
+            app.controller('MetricSelectionController', ['$scope', '$timeout', 'container', 'state', function( $scope, $timeout, container, state ) {
+                $scope.addMetric = function() {
+
+                    var newItemConfig = {
+                        title: 'some.metric',
+                        type: 'component',
+                        componentName: 'angularModule',
+                        componentState: {
+                            module: 'kairosdb',
+                            templateId: 'metricOptionsTemplate'
+                        }
+                    };
+
+                    container.layoutManager.root.contentItems[0].contentItems[0].contentItems[1].addChild( newItemConfig );
+                };
+            }]);
+
+            app.controller('QueryResultController', ['$scope', '$timeout', 'container', 'state', function( $scope, $timeout, container, state ) {
+
+            }]);
+
+            var myLayout = new GoldenLayout({
+                settings: {
+
+                },
+                content:[{
+                    type: 'row',
+                    content: [{
+                        type: 'column',
+                        isClosable: false,
+                        width: 20,
+                        content: [{
+                            type: 'stack',
+                            isClosable: false,
+                            height : 30,
+                            id: 'query-builder',
+                            content: [{
+                                title: 'Range',
+                                type: 'component',
+                                isClosable: false,
+                                componentName: 'angularModule',
+                                componentState: {
+                                    module: 'kairosdb',
+                                    templateId: 'queryBuilderTemplate'
+                                }
+                            },{
+                                title: 'Metrics',
+                                type: 'component',
+                                isClosable: false,
+                                componentName: 'angularModule',
+                                componentState: {
+                                    module: 'kairosdb',
+                                    templateId: 'metricSelectionTemplate'
+                                }
+                            }]
+                        },{
+                            type: 'stack',
+                            isClosable: false,
+                            content: []
+                        }]
+                    },{
+                        type: 'stack',
+                        isClosable: false,
+                        content: [{
+                            title: 'Help',
+                            type: 'component',
+                            isClosable: false,
+                            componentName: 'placeholderModule',
+                            componentState: {
+                                text: 'help text'
+                            }
+                        }]
+                    }]
+                }]
+            });
+
+            myLayout.registerComponent( 'angularModule', function( container, state ) {
+                var html = $( '#' + state.templateId ).html();
+                var element = container.getElement();
+
+                element.html( html );
+
+                angular
+                    .module( state.module )
+                    .value( 'container', container )
+                    .value( 'state', state );
+
+                angular.bootstrap( element[ 0 ], [ state.module ] );
+            });
+
+
+            myLayout.registerComponent( 'placeholderModule', function(container, state) {
+                container.getElement().html('<div class="component-inner">'+state.text+'</div>');
+            });
+
+            myLayout.init();
+        })();
+        </script>
+
+    </body>
+</html>
