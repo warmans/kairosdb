@@ -71,10 +71,8 @@ public class CassandraDatastore implements Datastore
 	public static final String SINGLE_ROW_READ_SIZE_PROPERTY = "kairosdb.datastore.cassandra.single_row_read_size";
 	public static final String MULTI_ROW_READ_SIZE_PROPERTY = "kairosdb.datastore.cassandra.multi_row_read_size";
 	public static final String MULTI_ROW_SIZE_PROPERTY = "kairosdb.datastore.cassandra.multi_row_size";
-	public static final String DATA_READ_CONSISTENCY_LEVEL = "kairosdb.datastore.cassandra.data_read_consistency_level";
-	public static final String DATA_WRITE_CONSISTENCY_LEVEL = "kairosdb.datastore.cassandra.data_write_consistency_level";
-	public static final String INDEX_READ_CONSISTENCY_LEVEL = "kairosdb.datastore.cassandra.index_read_consistency_level";
-	public static final String INDEX_WRITE_CONSISTENCY_LEVEL = "kairosdb.datastore.cassandra.index_write_consistency_level";
+	public static final String READ_CONSISTENCY_LEVEL = "kairosdb.datastore.cassandra.read_consistency_level";
+	public static final String WRITE_CONSISTENCY_LEVEL = "kairosdb.datastore.cassandra.write_consistency_level";
 	public static final String ROW_KEY_CACHE_SIZE_PROPERTY = "kairosdb.datastore.cassandra.row_key_cache_size";
 	public static final String STRING_CACHE_SIZE_PROPERTY = "kairosdb.datastore.cassandra.string_cache_size";
 
@@ -103,20 +101,12 @@ public class CassandraDatastore implements Datastore
 	private DataCache<String> m_tagValueCache = new DataCache<String>(1024);
 
 	@Inject
-	@Named(DATA_WRITE_CONSISTENCY_LEVEL)
-	private ConsitencyLevel m_dataWriteLevel = ConsitencyLevel.QUORUM;
+	@Named(WRITE_CONSISTENCY_LEVEL)
+	private ConsitencyLevel m_dataWriteLevel = ConsitencyLevel.ONE;
 
 	@Inject
-	@Named(DATA_READ_CONSISTENCY_LEVEL)
+	@Named(READ_CONSISTENCY_LEVEL)
 	private ConsitencyLevel m_dataReadLevel = ConsitencyLevel.ONE;
-
-	@Inject
-	@Named(INDEX_WRITE_CONSISTENCY_LEVEL)
-	private ConsitencyLevel m_indexWriteLevel = ConsitencyLevel.QUORUM;
-
-	@Inject
-	@Named(INDEX_READ_CONSISTENCY_LEVEL)
-	private ConsitencyLevel m_indexReadLevel = ConsitencyLevel.ONE;
 
 	@Inject
 	public void setRowKeyCacheSize(@Named(ROW_KEY_CACHE_SIZE_PROPERTY) int size)
@@ -134,15 +124,15 @@ public class CassandraDatastore implements Datastore
 
 	@Inject
 	public CassandraDatastore(@Named(CassandraModule.CASSANDRA_AUTH_MAP) Map<String, String> cassandraAuthentication,
-	                          @Named(REPLICATION_FACTOR_PROPERTY) int replicationFactor,
-	                          @Named(SINGLE_ROW_READ_SIZE_PROPERTY) int singleRowReadSize,
-	                          @Named(MULTI_ROW_SIZE_PROPERTY) int multiRowSize,
-	                          @Named(MULTI_ROW_READ_SIZE_PROPERTY) int multiRowReadSize,
-	                          @Named(WRITE_DELAY_PROPERTY) int writeDelay,
-	                          @Named(WRITE_BUFFER_SIZE) int maxWriteSize,
-	                          final @Named("HOSTNAME") String hostname,
-			                    @Named(KEYSPACE_PROPERTY) String keyspaceName,
-	                          HectorConfiguration configuration) throws DatastoreException
+							  @Named(REPLICATION_FACTOR_PROPERTY) int replicationFactor,
+							  @Named(SINGLE_ROW_READ_SIZE_PROPERTY) int singleRowReadSize,
+							  @Named(MULTI_ROW_SIZE_PROPERTY) int multiRowSize,
+							  @Named(MULTI_ROW_READ_SIZE_PROPERTY) int multiRowReadSize,
+							  @Named(WRITE_DELAY_PROPERTY) int writeDelay,
+							  @Named(WRITE_BUFFER_SIZE) int maxWriteSize,
+							  final @Named("HOSTNAME") String hostname,
+								@Named(KEYSPACE_PROPERTY) String keyspaceName,
+							  HectorConfiguration configuration) throws DatastoreException
 	{
 		try
 		{
@@ -160,20 +150,13 @@ public class CassandraDatastore implements Datastore
 
 			if (keyspaceDef == null)
 				createSchema(replicationFactor);
-
+            
+            //set global consistency level
 			ConfigurableConsistencyLevel confConsLevel = new ConfigurableConsistencyLevel();
+			confConsLevel.setDefaultReadConsistencyLevel(m_dataReadLevel.getHectorLevel());
+			confConsLevel.setDefaultWriteConsistencyLevel(m_dataWriteLevel.getHectorLevel());
 
-			Map<String, HConsistencyLevel> readLevels = new HashMap<String, HConsistencyLevel>();
-			readLevels.put(CF_DATA_POINTS, m_dataReadLevel.getHectorLevel());
-			readLevels.put(CF_ROW_KEY_INDEX, m_indexReadLevel.getHectorLevel());
-
-			Map <String, HConsistencyLevel> writeLevels = new HashMap<String, HConsistencyLevel>();
-			writeLevels.put(CF_DATA_POINTS, m_dataWriteLevel.getHectorLevel());
-			writeLevels.put(CF_ROW_KEY_INDEX, m_indexWriteLevel.getHectorLevel());
-
-			confConsLevel.setReadCfConsistencyLevels(readLevels);
-			confConsLevel.setWriteCfConsistencyLevels(writeLevels);
-
+            //create keyspace instance with specified consistency
 			m_keyspace = HFactory.createKeyspace(m_keyspaceName, m_cluster, confConsLevel);
 
 			ReentrantLock mutatorLock = new ReentrantLock();
@@ -330,6 +313,12 @@ public class CassandraDatastore implements Datastore
 					//Write metric name if not in cache
 					if (!m_metricNameCache.isCached(dps.getName()))
 					{
+						if (dps.getName().length() == 0)
+						{
+							logger.warn(
+								"Attempted to add empty metric name to string index. Row looks like: "+dps
+							);
+						}
 						m_stringIndexWriteBuffer.addData(ROW_KEY_METRIC_NAMES,
 								dps.getName(), "", now);
 					}
@@ -340,6 +329,12 @@ public class CassandraDatastore implements Datastore
 					{
 						if (!m_tagNameCache.isCached(tagName))
 						{
+							if(tagName.length() == 0)
+							{
+								logger.warn(
+									"Attempted to add empty tagName to string cache for metric: "+dps.getName()
+								);
+							}
 							m_stringIndexWriteBuffer.addData(ROW_KEY_TAG_NAMES,
 									tagName, "", now);
 						}
@@ -347,6 +342,12 @@ public class CassandraDatastore implements Datastore
 						String value = tags.get(tagName);
 						if (!m_tagValueCache.isCached(value))
 						{
+							if(value.toString().length() == 0)
+							{
+								logger.warn(
+									"Attempted to add empty tagValue (tag name "+tagName+") to string cache for metric: "+dps.getName()
+								);
+							}
 							m_stringIndexWriteBuffer.addData(ROW_KEY_TAG_VALUES,
 									value, "", now);
 						}
