@@ -15,11 +15,16 @@
  */
 package org.kairosdb.core.telnet;
 
+import com.google.common.collect.ImmutableSortedMap;
 import org.jboss.netty.channel.*;
 import org.junit.Before;
 import org.junit.Test;
+import org.kairosdb.core.DataPoint;
 import org.kairosdb.core.DataPointListener;
 import org.kairosdb.core.DataPointSet;
+import org.kairosdb.core.TestDataPointFactory;
+import org.kairosdb.core.datapoints.DoubleDataPointFactoryImpl;
+import org.kairosdb.core.datapoints.LongDataPointFactoryImpl;
 import org.kairosdb.core.datastore.*;
 import org.kairosdb.core.exception.DatastoreException;
 import org.kairosdb.util.ValidationException;
@@ -41,8 +46,9 @@ public class PutCommandTest
 	{
 		datastore = new FakeDatastore();
 		KairosDatastore kairosDatastore = new KairosDatastore(datastore, new QueryQueuingManager(1, "test"),
-				Collections.<DataPointListener>emptyList(), "test");
-		command = new PutCommand(kairosDatastore, "test");
+				Collections.<DataPointListener>emptyList(), new TestDataPointFactory());
+		command = new PutCommand(kairosDatastore, "test", new LongDataPointFactoryImpl(),
+				new DoubleDataPointFactoryImpl());
 	}
 
 	@Test
@@ -77,21 +83,9 @@ public class PutCommandTest
 	}
 
 	@Test
-	public void test_metricName_characters_invalid() throws DatastoreException, ValidationException
+	public void test_metricName_characters_valid() throws DatastoreException, ValidationException
 	{
-		try
-		{
-			command.execute(new FakeChannel(), new String[]{"telnet", "foo:bar", "12345678999", "789", "foo=bar", "fum=barfum"});
-			fail("ValidationException expected");
-		}
-		catch (DatastoreException e)
-		{
-			fail("ValidationException expected");
-		}
-		catch (ValidationException e)
-		{
-			assertThat(e.getMessage(), equalTo("metricName may only contain alphanumeric characters plus periods '.', slash '/', dash '-', and underscore '_'."));
-		}
+		command.execute(new FakeChannel(), new String[]{"telnet", "你好", "12345678999", "789", "foo=bar", "fum=barfum"});
 	}
 
 	@Test
@@ -126,7 +120,7 @@ public class PutCommandTest
 		}
 		catch (ValidationException e)
 		{
-			assertThat(e.getMessage(), equalTo("tag[1].name may only contain alphanumeric characters plus periods '.', slash '/', dash '-', and underscore '_'."));
+			assertThat(e.getMessage(), equalTo("tag[1].name may contain any character except colon ':', and equals '='."));
 		}
 	}
 
@@ -162,7 +156,7 @@ public class PutCommandTest
 		}
 		catch (ValidationException e)
 		{
-			assertThat(e.getMessage(), equalTo("tag[1].value may only contain alphanumeric characters plus periods '.', slash '/', dash '-', and underscore '_'."));
+			assertThat(e.getMessage(), equalTo("tag[1].value may contain any character except colon ':', and equals '='."));
 		}
 	}
 
@@ -357,10 +351,19 @@ public class PutCommandTest
 		}
 
 		@Override
+		public void putDataPoint(String metricName, ImmutableSortedMap<String, String> tags, DataPoint dataPoint) throws DatastoreException
+		{
+			if (set == null)
+				set = new DataPointSet(metricName, tags, Collections.EMPTY_LIST);
+
+			set.addDataPoint(dataPoint);
+		}
+
+		/*@Override
 		public void putDataPoints(DataPointSet dps) throws DatastoreException
 		{
 			this.set = dps;
-		}
+		}*/
 
 		@Override
 		public Iterable<String> getMetricNames() throws DatastoreException

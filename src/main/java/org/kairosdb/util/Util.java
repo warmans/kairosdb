@@ -18,33 +18,20 @@ package org.kairosdb.util;
 
 import com.google.common.collect.ImmutableList;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.*;
 import java.util.Collections;
 import java.util.List;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public class Util
 {
-	public static int compareLong(long l1, long l2)
-	{
-		long ret = l1 - l2;
-
-		if (ret == 0L)
-			return (0);
-		else if (ret < 0L)
-			return (-1);
-		else
-			return (1);
-	}
-
-
-
 	/**
 	 Special thanks to Nadeau software consulting for publishing this code.
 	 http://nadeausoftware.com/node/97
 	 @param s string representation of number to parse
-	 @return
+	 @return number
 	 */
 	public static long parseLong( final CharSequence s )
 	{
@@ -132,6 +119,52 @@ public class Util
 		}
 	}
 
+	public static void packUnsignedLong(long value, DataOutput buffer) throws IOException
+	{
+		/* Encodes a value using the variable-length encoding from
+		<a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html">
+		Google Protocol Buffers</a>. Zig-zag is not used, so input must not be negative.
+		If values can be negative, use {@link #writeSignedVarLong(long, DataOutput)}
+		instead. This method treats negative input as like a large unsigned value. */
+		while ((value & ~0x7FL) != 0L)
+		{
+			buffer.writeByte((int) ((value & 0x7F) | 0x80));
+			value >>>= 7;
+		}
+		buffer.writeByte((int) value);
+	}
+
+	public static long unpackUnsignedLong(DataInput buffer) throws IOException
+	{
+		int shift = 0;
+		long result = 0;
+		while (shift < 64)
+		{
+			final byte b = buffer.readByte();
+			result |= (long)(b & 0x7F) << shift;
+			if ((b & 0x80) == 0)
+			{
+				return result;
+			}
+			shift += 7;
+		}
+		throw new IllegalArgumentException("Variable length quantity is too long");
+	}
+
+	public static void packLong(long value, DataOutput buffer) throws IOException
+	{
+		// Great trick from http://code.google.com/apis/protocolbuffers/docs/encoding.html#types
+		packUnsignedLong((value << 1) ^ (value >> 63), buffer);
+
+	}
+
+	public static long unpackLong(DataInput buffer) throws IOException
+	{
+		long value = unpackUnsignedLong(buffer);
+
+		return ((value >>> 1) ^ -(value & 1));
+	}
+
 	public static InetAddress findPublicIp()
 	{
 		// Check if local host address is a good v4 address
@@ -172,6 +205,43 @@ public class Util
 		// just return the local host address
 		// it is most likely that this is a disconnected developer machine
 		return localAddress;
+	}
+
+	/**
+	 Returns true if the string contains a number. This means it contains only digits, the minus sign, plus sign
+	 and a period.
+
+	 @param s string to test
+	 @return true if only contains a number value
+	 */
+	public static boolean isNumber(String s)
+	{
+		checkNotNull(s);
+
+		if (s.isEmpty())
+			return false;
+
+		int start = 0;
+		char firstChar = s.charAt(0);
+		if (firstChar == '+' || firstChar == '-' || firstChar == '.')
+		{
+			start = 1;
+			if (s.length() == 1)
+				return false;
+		}
+
+		for (int i = start; i < s.length(); i++)
+		{
+			char c = s.charAt(i);
+			if (!Character.isDigit(c) && c != '.')
+				return false;
+		}
+
+		//noinspection RedundantIfStatement
+		if (s.charAt(s.length() - 1) == '.')
+			return false; // can't have trailing period
+
+		return true;
 	}
 
 	private static List<NetworkInterface> getGoodNetworkInterfaces()

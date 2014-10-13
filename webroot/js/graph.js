@@ -699,22 +699,35 @@ function showChart(subTitle, queries, metricData) {
 
 			var groupByMessage = "";
 			var groupBy = queryResult.group_by;
+            var groupType;
+            //debugger;
 			if (groupBy) {
 				$.each(groupBy, function (index, group) {
-					groupByMessage += '<br>(' + group.name + ': ';
+					if (group.name == 'type')
+					{
+						groupType = group.type;
+						return;
+					}
 
-					var first = true;
+                    groupByMessage += '<br>(' + group.name + ': ';
+
+                    var first = true;
 					$.each(group.group, function (key, value) {
-						if (!first)
-							groupByMessage += ", ";
-						groupByMessage += key + '=' + value;
-						first = false;
+                        if (value.length > 0) {
+                            if (!first)
+                                groupByMessage += ", ";
+                            groupByMessage += key + '=' + value;
+                            first = false;
+                        }
 					});
 
 					groupByMessage += ')';
 
 				});
 			}
+
+			if (groupType != 'number')
+				return;
 
 			var result = {};
 			result.name = queryResult.name + groupByMessage;

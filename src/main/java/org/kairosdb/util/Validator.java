@@ -16,6 +16,7 @@
 
 package org.kairosdb.util;
 
+import com.google.gson.JsonElement;
 import org.kairosdb.core.http.rest.json.ValidationErrors;
 
 public class Validator
@@ -47,8 +48,8 @@ public class Validator
 
 	public static boolean isValidateCharacterSet(ValidationErrors validationErrors, Object name, String value)
 	{
-		if (value == null || value.isEmpty() || !CharacterSet.isValid(value)){
-			validationErrors.addErrorMessage(name + " may only contain alphanumeric characters plus periods '.', slash '/', dash '-', and underscore '_'.");
+		if (value == null || value.isEmpty() || !CharacterSet.isValidTagNameValue(value)){
+			validationErrors.addErrorMessage(name + " may contain any character except colon ':', and equals '='.");
 			return false;
 		}
 		return true;
@@ -62,6 +63,32 @@ public class Validator
 			return false;
 		}
 		if (value.isEmpty())
+		{
+			validationErrors.addErrorMessage(name + " may not be empty.");
+			return false;
+		}
+
+		return true;
+	}
+
+	public static boolean isNotNullOrEmpty(ValidationErrors validationErrors, Object name, JsonElement value)
+	{
+		if (value == null)
+		{
+			validationErrors.addErrorMessage(name + " may not be null.");
+			return false;
+		}
+		if (value.isJsonNull())
+		{
+			validationErrors.addErrorMessage(name + " may not be empty.");
+			return false;
+		}
+		if (value.isJsonArray() && value.getAsJsonArray().size() < 1)
+		{
+			validationErrors.addErrorMessage(name + " may not be an empty array.");
+			return false;
+		}
+		if (!value.isJsonObject() && value.getAsString().isEmpty())
 		{
 			validationErrors.addErrorMessage(name + " may not be empty.");
 			return false;

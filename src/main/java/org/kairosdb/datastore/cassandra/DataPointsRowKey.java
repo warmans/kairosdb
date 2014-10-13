@@ -18,23 +18,31 @@ package org.kairosdb.datastore.cassandra;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static org.kairosdb.util.Preconditions.checkNotNullOrEmpty;
+
 public class DataPointsRowKey
 {
-	private String m_metricName;
-	private long m_timestamp;
-	private SortedMap<String, String> m_tags;
+	private final String m_metricName;
+	private final long m_timestamp;
+	private final String m_dataType;
+	private final SortedMap<String, String> m_tags;
+	private boolean m_endSearchKey; //Only used for end slice operations.  Serialization
+		//adds a 0xFF after the timestamp to make sure we get all data for that timestamp.
 
-	public DataPointsRowKey(String metricName, long timestamp)
+	public DataPointsRowKey(String metricName, long timestamp, String dataType)
 	{
-		this(metricName, timestamp, new TreeMap<String, String>());
+		this(metricName, timestamp, dataType, new TreeMap<String, String>());
 	}
 
-	public DataPointsRowKey(String metricName, long timestamp,
+	public DataPointsRowKey(String metricName, long timestamp, String datatype,
 			SortedMap<String, String> tags)
 	{
-		m_metricName = metricName;
+		m_metricName = checkNotNullOrEmpty(metricName);
 		m_timestamp = timestamp;
+		m_dataType = checkNotNull(datatype);
 		m_tags = tags;
+
 	}
 
 	public void addTag(String name, String value)
@@ -57,7 +65,26 @@ public class DataPointsRowKey
 		return m_timestamp;
 	}
 
-	@SuppressWarnings("RedundantIfStatement")
+	public boolean isEndSearchKey()
+	{
+		return m_endSearchKey;
+	}
+
+	public void setEndSearchKey(boolean endSearchKey)
+	{
+		m_endSearchKey = endSearchKey;
+	}
+
+	/**
+	 If this returns "" (empty string)` then it is the old row key format and the data type
+	 is determined by the timestamp bit in the column.
+	 @return
+	 */
+	public String getDataType()
+	{
+		return m_dataType;
+	}
+
 	@Override
 	public boolean equals(Object o)
 	{
@@ -67,6 +94,8 @@ public class DataPointsRowKey
 		DataPointsRowKey that = (DataPointsRowKey) o;
 
 		if (m_timestamp != that.m_timestamp) return false;
+		if (m_dataType != null ? !m_dataType.equals(that.m_dataType) : that.m_dataType != null)
+			return false;
 		if (!m_metricName.equals(that.m_metricName)) return false;
 		if (!m_tags.equals(that.m_tags)) return false;
 
@@ -78,6 +107,7 @@ public class DataPointsRowKey
 	{
 		int result = m_metricName.hashCode();
 		result = 31 * result + (int) (m_timestamp ^ (m_timestamp >>> 32));
+		result = 31 * result + (m_dataType != null ? m_dataType.hashCode() : 0);
 		result = 31 * result + m_tags.hashCode();
 		return result;
 	}
@@ -88,6 +118,7 @@ public class DataPointsRowKey
 		return "DataPointsRowKey{" +
 				"m_metricName='" + m_metricName + '\'' +
 				", m_timestamp=" + m_timestamp +
+				", m_dataType='" + m_dataType + '\'' +
 				", m_tags=" + m_tags +
 				'}';
 	}

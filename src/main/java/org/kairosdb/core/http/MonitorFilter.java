@@ -19,6 +19,7 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import org.kairosdb.core.DataPoint;
 import org.kairosdb.core.DataPointSet;
+import org.kairosdb.core.datapoints.LongDataPointFactory;
 import org.kairosdb.core.reporting.KairosMetricReporter;
 
 import javax.servlet.*;
@@ -36,15 +37,17 @@ import static org.kairosdb.util.Preconditions.checkNotNullOrEmpty;
 
 public class MonitorFilter implements Filter, KairosMetricReporter
 {
-    public static final Logger logger = LoggerFactory.getLogger(MonitorFilter.class);
+	private static final Logger logger = LoggerFactory.getLogger(MonitorFilter.class);
     
 	private final String hostname;
 	private final ConcurrentMap<String, AtomicInteger> counterMap = new ConcurrentHashMap<String, AtomicInteger>();
+	private final LongDataPointFactory m_dataPointFactory;
 
 	@Inject
-	public MonitorFilter(@Named("HOSTNAME")String hostname)
+	public MonitorFilter(@Named("HOSTNAME")String hostname, LongDataPointFactory dataPointFactory)
 	{
 		this.hostname = checkNotNullOrEmpty(hostname);
+		m_dataPointFactory = dataPointFactory;
 	}
 
 	@Override
@@ -92,7 +95,7 @@ public class MonitorFilter implements Filter, KairosMetricReporter
 			DataPointSet dps = new DataPointSet("kairosdb.protocol.http_request_count");
 			dps.addTag("host", hostname);
 			dps.addTag("method", resource);
-			dps.addDataPoint(new DataPoint(now, (long)counterMap.get(resource).getAndSet(0)));
+			dps.addDataPoint(m_dataPointFactory.createDataPoint(now, (long)counterMap.get(resource).getAndSet(0)));
 
 			ret.add(dps);
 		}

@@ -24,6 +24,9 @@ import com.google.gson.stream.MalformedJsonException;
 import com.google.inject.name.Named;
 import org.kairosdb.core.DataPoint;
 import org.kairosdb.core.DataPointSet;
+import org.kairosdb.core.KairosDataPointFactory;
+import org.kairosdb.core.datapoints.LongDataPointFactory;
+import org.kairosdb.core.datapoints.LongDataPointFactoryImpl;
 import org.kairosdb.core.datastore.DataPointGroup;
 import org.kairosdb.core.datastore.DatastoreQuery;
 import org.kairosdb.core.datastore.KairosDatastore;
@@ -78,30 +81,39 @@ public class MetricsResource implements KairosMetricReporter
 	private final Gson gson;
 
 	//These two are used to track rate of ingestion
-	private AtomicInteger m_ingestedDataPoints = new AtomicInteger();
-	private AtomicInteger m_ingestTime = new AtomicInteger();
+	private final AtomicInteger m_ingestedDataPoints = new AtomicInteger();
+	private final AtomicInteger m_ingestTime = new AtomicInteger();
+
+	private final KairosDataPointFactory m_kairosDataPointFactory;
+
+	@Inject
+	private LongDataPointFactory m_longDataPointFactory = new LongDataPointFactoryImpl();
 
 	@Inject
 	@Named("HOSTNAME")
 	private String hostName = "localhost";
 
 	@Inject
-	public MetricsResource(KairosDatastore datastore, GsonParser gsonParser)
+	public MetricsResource(KairosDatastore datastore, GsonParser gsonParser,
+			KairosDataPointFactory dataPointFactory)
 	{
 		this.datastore = checkNotNull(datastore);
 		this.gsonParser = checkNotNull(gsonParser);
+		m_kairosDataPointFactory = dataPointFactory;
 		formatters.put("json", new JsonFormatter());
 
 		GsonBuilder builder = new GsonBuilder();
 		gson = builder.create();
 	}
 
-	private void setHeaders(ResponseBuilder responseBuilder)
+	private ResponseBuilder setHeaders(ResponseBuilder responseBuilder)
 	{
 		responseBuilder.header("Access-Control-Allow-Origin", "*");
 		responseBuilder.header("Pragma", "no-cache");
 		responseBuilder.header("Cache-Control", "no-cache");
 		responseBuilder.header("Expires", 0);
+
+		return (responseBuilder);
 	}
 
 	@GET
@@ -166,14 +178,15 @@ public class MetricsResource implements KairosMetricReporter
 	{
 		try
 		{
-			JsonMetricParser parser = new JsonMetricParser(datastore, new InputStreamReader(json, "UTF-8"), gson);
+			JsonMetricParser parser = new JsonMetricParser(datastore, new InputStreamReader(json, "UTF-8"),
+					gson, m_kairosDataPointFactory);
 			ValidationErrors validationErrors = parser.parse();
 
 			m_ingestedDataPoints.addAndGet(parser.getDataPointCount());
 			m_ingestTime.addAndGet(parser.getIngestTime());
 
 			if (!validationErrors.hasErrors())
-				return Response.status(Response.Status.NO_CONTENT).build();
+				return setHeaders(Response.status(Response.Status.NO_CONTENT)).build();
 			else
 			{
 				JsonResponseBuilder builder = new JsonResponseBuilder(Response.Status.BAD_REQUEST);
@@ -202,12 +215,12 @@ public class MetricsResource implements KairosMetricReporter
 		catch (Exception e)
 		{
 			logger.error("Failed to add metric.", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 		catch (OutOfMemoryError e)
 		{
 			logger.error("Out of memory error.", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 	}
 
@@ -277,17 +290,17 @@ public class MetricsResource implements KairosMetricReporter
 		{
 			logger.error("Query failed.", e);
 			System.gc();
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 		catch (Exception e)
 		{
 			logger.error("Query failed.", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 		catch (OutOfMemoryError e)
 		{
 			logger.error("Out of memory error.", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 	}
 
@@ -345,7 +358,7 @@ public class MetricsResource implements KairosMetricReporter
 			ThreadReporter.addTag("request", QUERY_URL);
 			ThreadReporter.addDataPoint(REQUEST_TIME, System.currentTimeMillis() - ThreadReporter.getReportTime());
 
-			ThreadReporter.submitData(datastore);
+			ThreadReporter.submitData(m_longDataPointFactory, datastore);
 
 			ResponseBuilder responseBuilder = Response.status(Response.Status.OK).entity(
 					new FileStreamingOutput(respFile));
@@ -373,17 +386,17 @@ public class MetricsResource implements KairosMetricReporter
 			logger.error("Query failed.", e);
 			Thread.sleep(1000);
 			System.gc();
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 		catch (Exception e)
 		{
 			logger.error("Query failed.", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 		catch (OutOfMemoryError e)
 		{
 			logger.error("Out of memory error.", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 		finally
 		{
@@ -408,9 +421,7 @@ public class MetricsResource implements KairosMetricReporter
 				datastore.delete(query);
 			}
 
-			ResponseBuilder responseBuilder = Response.status(Response.Status.NO_CONTENT);
-			responseBuilder.header("Access-Control-Allow-Origin", "*");
-			return responseBuilder.build();
+			return setHeaders(Response.status(Response.Status.NO_CONTENT)).build();
 		}
 		catch (JsonSyntaxException e)
 		{
@@ -431,17 +442,17 @@ public class MetricsResource implements KairosMetricReporter
 		{
 			logger.error("Query failed.", e);
 			System.gc();
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 		catch (Exception e)
 		{
 			logger.error("Delete failed.", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 		catch (OutOfMemoryError e)
 		{
 			logger.error("Out of memory error.", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 	}
 
@@ -502,17 +513,16 @@ public class MetricsResource implements KairosMetricReporter
 	{
 		try
 		{
-			QueryMetric query = new QueryMetric(0L, Long.MAX_VALUE, 0, metricName);
+			QueryMetric query = new QueryMetric(Long.MIN_VALUE, Long.MAX_VALUE, 0, metricName);
 			datastore.delete(query);
 
-			ResponseBuilder responseBuilder = Response.status(Response.Status.NO_CONTENT);
-			responseBuilder.header("Access-Control-Allow-Origin", "*");
-			return responseBuilder.build();
+
+			return setHeaders(Response.status(Response.Status.NO_CONTENT)).build();
 		}
 		catch (Exception e)
 		{
 			logger.error("Delete failed.", e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage())).build();
+			return setHeaders(Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorResponse(e.getMessage()))).build();
 		}
 	}
 
@@ -564,8 +574,8 @@ public class MetricsResource implements KairosMetricReporter
 		dpsCount.addTag("host", hostName);
 		dpsTime.addTag("host", hostName);
 
-		dpsCount.addDataPoint(new DataPoint(now, count));
-		dpsTime.addDataPoint(new DataPoint(now, time));
+		dpsCount.addDataPoint(m_longDataPointFactory.createDataPoint(now, count));
+		dpsTime.addDataPoint(m_longDataPointFactory.createDataPoint(now, time));
 		List<DataPointSet> ret = new ArrayList<DataPointSet>();
 		ret.add(dpsCount);
 		ret.add(dpsTime);

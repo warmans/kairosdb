@@ -15,6 +15,7 @@
  */
 package org.kairosdb.util;
 
+import com.google.gson.*;
 import org.junit.Test;
 import org.kairosdb.core.http.rest.json.ValidationErrors;
 
@@ -41,7 +42,7 @@ public class ValidatorTest
 		}
 		catch (ValidationException e)
 		{
-			assertThat(e.getMessage(), equalTo("test may only contain alphanumeric characters plus periods '.', slash '/', dash '-', and underscore '_'."));
+			assertThat(e.getMessage(), equalTo("test may contain any character except colon ':', and equals '='."));
 		}
 	}
 
@@ -114,11 +115,11 @@ public class ValidatorTest
 		ValidationErrors errors = new ValidationErrors();
 
 		assertThat(Validator.isValidateCharacterSet(errors, "test", "ABC:123"), equalTo(false));
-		assertThat(errors.getErrors(), hasItem("test may only contain alphanumeric characters plus periods '.', slash '/', dash '-', and underscore '_'."));
+		assertThat(errors.getErrors(), hasItem("test may contain any character except colon ':', and equals '='."));
 	}
 
 	@Test
-	public void test_isNotNullOrEmpty_valid()
+	public void test_isNotNullOrEmpty_string_valid()
 	{
 		ValidationErrors errors = new ValidationErrors();
 
@@ -126,12 +127,58 @@ public class ValidatorTest
 	}
 
 	@Test
-	public void test_isNotNullOrEmpty_invalid()
+	public void test_isNotNullOrEmpty_string_invalid()
 	{
 		ValidationErrors errors = new ValidationErrors();
 
-		assertThat(Validator.isNotNullOrEmpty(errors, "name", null), equalTo(false));
+		assertThat(Validator.isNotNullOrEmpty(errors, "name", (String)null), equalTo(false));
 		assertThat(errors.getErrors(), hasItem("name may not be null."));
+	}
+
+
+	@Test
+	public void test_isNotNullOrEmpty_JsonElement_null_value_invalid()
+	{
+		ValidationErrors errors = new ValidationErrors();
+
+		assertThat(Validator.isNotNullOrEmpty(errors, "value", (JsonElement)null), equalTo(false));
+		assertThat(errors.getErrors(), hasItem("value may not be null."));
+	}
+
+	@Test
+	public void test_isNotNullOrEmpty_JsonElement_isJsonNull_value_invalid()
+	{
+		ValidationErrors errors = new ValidationErrors();
+
+		assertThat(Validator.isNotNullOrEmpty(errors, "value", JsonNull.INSTANCE), equalTo(false));
+		assertThat(errors.getErrors(), hasItem("value may not be empty."));
+	}
+
+	@Test
+	public void test_isNotNullOrEmpty_JsonPrimitive_empty_value_invalid()
+	{
+		ValidationErrors errors = new ValidationErrors();
+
+		assertThat(Validator.isNotNullOrEmpty(errors, "value", new JsonPrimitive("")), equalTo(false));
+		assertThat(errors.getErrors(), hasItem("value may not be empty."));
+	}
+
+	@Test
+	public void test_isNotNullOrEmpty_JsonArray_empty_value_invalid()
+	{
+		ValidationErrors errors = new ValidationErrors();
+
+		assertThat(Validator.isNotNullOrEmpty(errors, "value", new JsonArray()), equalTo(false));
+		assertThat(errors.getErrors(), hasItem("value may not be an empty array."));
+	}
+
+	@Test
+	public void test_isNotNullOrEmpty_JsonObject_empty_value_valid()
+	{
+		ValidationErrors errors = new ValidationErrors();
+
+		assertThat(Validator.isNotNullOrEmpty(errors, "value", new JsonObject()), equalTo(true));
+		assertThat(errors.getErrors().size(), equalTo(0));
 	}
 
 	@Test
@@ -150,5 +197,4 @@ public class ValidatorTest
 		assertThat(Validator.isGreaterThanOrEqualTo(errors, "name", 10, 11), equalTo(false));
 		assertThat(errors.getErrors(), hasItem("name must be greater than or equal to 11."));
 	}
-
 }
