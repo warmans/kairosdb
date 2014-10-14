@@ -1,0 +1,57 @@
+<div ng-controller="QueryBuilderController" class="component-inner">
+    <form role="form">
+        <div class="form-group">
+            <label>Type:</label>
+            <select class="form-control input-sm" ng-model="date_range_type">
+                <option value="relative">Relative</option>
+                <option value="absolute">Absolute</option>
+            </select>
+        </div>
+        <div ng-show="date_range_type === 'absolute'">
+            <div class="form-group">
+                <label for="from-abs">From:</label>
+                <input type="text" class="form-control input-sm" id="from-abs" name="from-abs" placeholder="2014-01-01">
+            </div>
+            <div class="form-group">
+                <label for="to-abs">To:</label>
+                <input type="text" class="form-control input-sm" id="to-abs" name="to-abs" placeholder="2014-01-01">
+            </div>
+        </div>
+        <div ng-show="date_range_type === 'relative'">
+            <label>From:</label>
+            <div class="row form-group">
+                <div class="col-lg-2">
+                    <input type="text"  class="form-control input-sm" id="from-rel-interval" name="from-rel-unit" placeholder="e.g. 1" value="1">
+                </div>
+                <div class="col-lg-10">
+                    <div class="input-group">
+                        <select class="form-control input-sm" id="from-rel-unit" name="from-rel-unit">
+                            <option value="seconds">Seconds</option>
+                            <option value="minutes">Minutes</option>
+                            <option selected value="hours">Hours</option>
+                            <option value="days">Days</option>
+                        </select>
+                        <div class="input-group-addon">Ago</div>
+                    </div>
+                </div>
+            </div>
+            <label>To:</label>
+            <div class="row form-group">
+                <div class="col-lg-2">
+                    <input type="text" class="form-control input-sm" id="to-rel-interval" name="to-rel-unit">
+                </div>
+                <div class="col-lg-10">
+                    <div class="input-group">
+                        <select class="form-control input-sm" id="to-rel-unit" name="from-rel-unit">
+                            <option value="seconds">Seconds</option>
+                            <option value="minutes">Minutes</option>
+                            <option selected value="hours">Hours</option>
+                            <option value="days">Days</option>
+                        </select>
+                        <div class="input-group-addon">Ago</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

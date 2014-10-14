@@ -7,7 +7,7 @@ module.exports = function(grunt) {
           },
           dist: {
               files: {
-                  'dist/<%= pkg.name %>.js': [
+                  'dist/vendor.js': [
                       'bower_components/jquery/dist/jquery.min.js',
                       'bower_components/angular/angular.min.js',
                       'bower_components/angular-tree-control/angular-tree-control.js',

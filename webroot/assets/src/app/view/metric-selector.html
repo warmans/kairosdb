@@ -1,0 +1,10 @@
+<div ng-controller="MetricSelectionController" class="component-inner">
+
+    <div class="form-group">
+        <input type="text" class="form-control" placeholder="search..."s ng-model="metricTreeFilter"/>
+    </div>
+
+    <treecontrol class="tree-dark" tree-model="metricTree" options="treeOptions" filter-expression="metricTreeFilter">
+        <a href="#" ng-click="addMetric(node)" ng-show="node.children.length === 0"><span class="glyphicon glyphicon-plus"></span></a> {{node.label}}
+    </treecontrol>
+</div>
