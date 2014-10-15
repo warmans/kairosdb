@@ -1,6 +1,6 @@
 (function() {
 
-    var app = angular.module('kairosdb', ['treeControl']);
+    var app = angular.module('kairos-ui', ['treeControl', 'kairos-api']);
 
     app.directive('metricGroup', function() {
 
@@ -9,47 +9,69 @@
         }
 
         return {
-            templateUrl: '/assets/src/app/view/directive/metric-group.html',
+            templateUrl: '/assets/src/app/kairos-ui/view/directive/metric-group.html',
             link: link
         };
     })
 
-    app.controller('QueryBuilderController', ['$scope', '$timeout', 'container', 'state', function( $scope, $timeout, container, state ) {
+    app.controller('QueryBuilderController', ['$scope', 'container', 'state', function( $scope, container, state ) {
 
         $scope.date_range_type = 'relative';
 
     }]);
 
-    app.controller('MetricOptionsController', ['$scope', '$timeout', 'container', 'state', function( $scope, $timeout, container, state ) {
+    app.controller('MetricOptionsController', ['$scope', 'container', 'state', function( $scope, container, state ) {
         $scope.metric = state.metric;
 
     }]);
 
-    app.controller('MetricSelectionController', ['$scope', '$timeout', 'container', 'state', function( $scope, $timeout, container, state ) {
+    app.controller('MetricSelectionController', ['$scope', 'container', 'state', 'kapi', function( $scope, container, state, kapi) {
+
+        $scope.metricTree = [];
+
+        kapi.getMetricNames(function(data) {
+
+            /**
+             * This will convert dot separated metric names into a tree structure suitable for ng-tree
+             */
+
+            var root = {label: 'root', metric: '', children: []};
+
+            angular.forEach(data, function(metric) {
+
+                var parent = root;
+                var levelText = metric.split('.').reverse();
+
+                while (levelText.length > 0) {
+
+                    var child = {label: levelText.pop(), metric: (levelText.length !== 1) ? metric : '', children: []};
+
+                    var append = true;
+                    angular.forEach(parent.children, function (existingChild, key) {
+                        if (existingChild.label === child.label) {
+                            //replace active child with existing if duplicate found
+                            child = parent.children[key];
+                            append = false;
+                        }
+                    });
+
+                    //no existing child was found so append a new one
+                    if (append) {
+                        parent.children.push(child);
+                    }
+
+                    parent = child;
+                }
+            });
+
+            //don't include the root node
+            $scope.metricTree = root.children;
+        });
 
         $scope.treeOptions = {
             nodeChildren: "children",
-            dirSelectable: true,
-            injectClasses: {
-                ul: "a1",
-                li: "a2",
-                liSelected: "a7",
-                iExpanded: "a3",
-                iCollapsed: "a4",
-                iLeaf: "a5",
-                label: "a6",
-                labelSelected: "a8"
-            }
+            dirSelectable: false
         }
-
-        $scope.metricTree = [
-            { "label" : "some", metric: "", "hidden": false, "children" : [
-                {"label": "metric", "metric" : "some.metric", "children" : []},
-                {"label": "other", metric: "", "children" : [
-                    {"label": "metric", "metric" : "some.other.metric", "children": []}
-                ]}
-            ]}
-        ];
 
         $scope.metricTreeFilter = '';
 
@@ -61,8 +83,8 @@
                 componentName: 'angularModule',
                 id: selectedMetric["metric"],
                 componentState: {
-                    module: 'kairosdb',
-                    templatePath: '/assets/src/app/view/metric-options.html',
+                    module: 'kairos-ui',
+                    templatePath: '/assets/src/app/kairos-ui/view/metric-options.html',
                     metric: selectedMetric
                 }
             };
@@ -83,8 +105,8 @@
                 type: 'component',
                 componentName: 'angularModule',
                 componentState: {
-                    module: 'kairosdb',
-                    templatePath: '/assets/src/app/view/query-result.html'
+                    module: 'kairos-ui',
+                    templatePath: '/assets/src/app/kairos-ui/view/query-result.html'
                 }
             };
 
@@ -112,8 +134,8 @@
                         isClosable: false,
                         componentName: 'angularModule',
                         componentState: {
-                            module: 'kairosdb',
-                            templatePath: '/assets/src/app/view/date-selector.html'
+                            module: 'kairos-ui',
+                            templatePath: '/assets/src/app/kairos-ui/view/date-selector.html'
                         }
                     },{
                         title: 'Metrics',
@@ -121,8 +143,8 @@
                         isClosable: false,
                         componentName: 'angularModule',
                         componentState: {
-                            module: 'kairosdb',
-                            templatePath: '/assets/src/app/view/metric-selector.html'
+                            module: 'kairos-ui',
+                            templatePath: '/assets/src/app/kairos-ui/view/metric-selector.html'
                         }
                     }]
                 },{
@@ -137,8 +159,8 @@
                     height: 15,
                     id: 'actions-panel',
                     componentState: {
-                        module: 'kairosdb',
-                        templatePath: '/assets/src/app/view/actions.html'
+                        module: 'kairos-ui',
+                        templatePath: '/assets/src/app/kairos-ui/view/actions.html'
                     }
                 }]
             },{
