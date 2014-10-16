@@ -1,6 +1,6 @@
 (function() {
 
-    var app = angular.module('kairos-ui', ['treeControl', 'kairos-api']);
+    var app = angular.module('kairos-ui', ['treeControl', 'kairos-api', 'ui.bootstrap']);
 
     app.directive('metricGroup', function() {
 
@@ -21,6 +21,21 @@
     }]);
 
     app.controller('MetricOptionsController', ['$scope', 'container', 'state', function( $scope, container, state ) {
+
+        $scope.filters = [];
+
+        $scope.addFilter = function() {
+            $scope.filters.push({"tag": "", "value": ""});
+        };
+
+        $scope.removeFilter = function(key) {
+            $scope.filters.splice(key, 1);
+        };
+
+        $scope.tagValues = function(query) {
+            return ['tag1']
+        };
+
         $scope.metric = state.metric;
 
     }]);
@@ -150,7 +165,16 @@
                 },{
                     type: 'stack',
                     isClosable: false,
-                    content: []
+                    content: [{
+                        title: 'Placeholder',
+                        type: 'component',
+                        isClosable: false,
+                        componentName: 'angularModule',
+                        componentState: {
+                            module: 'kairos-ui',
+                            templatePath: '/assets/src/app/kairos-ui/view/metric-options.html'
+                        }
+                    }]
                 },{
                     title: 'Actions',
                     type: 'component',

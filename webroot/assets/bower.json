@@ -1,9 +1,13 @@
 {
-    "name": "kairosdb",
-    "devDependencies": {
-        "bootstrap": "~3.2.0",
-        "golden-layout": "~1.0.3",
-        "angular": "~1.2.0",
-        "angular-tree-control": "~0.2.5"
-    }
+  "name": "kairosdb",
+  "devDependencies": {
+    "bootstrap": "~3.2.0",
+    "golden-layout": "~1.0.3",
+    "angular": "~1.2.0",
+    "angular-tree-control": "~0.2.5"
+  },
+  "dependencies": {
+    "ng-tags-input": "~2.1.1",
+    "angular-ui-bootstrap": "gh-pages"
+  }
 }

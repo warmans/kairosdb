@@ -25,6 +25,9 @@
 @legend-color:                   @text-color;
 @legend-border-color:            #333;
 
+@table-border-color: #333;
+
+
 body {
   background-color : #000;
 }
@@ -44,7 +47,19 @@ ul.lm_tabs li {
   padding : 10px;
 }
 
+/* tables */
+
+.table > thead > tr > th {
+  vertical-align: bottom;
+  border-bottom: 1px solid @table-border-color;
+}
+
 /* forms */
+@input-height-small: (floor(@font-size-small * @line-height-small) + (@padding-small-vertical * 2) + 2) * 0.8;
+
+.form-control {
+  padding: 0px;
+}
 
 /* tree */
 treecontrol {

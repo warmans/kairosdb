@@ -1,6 +1,58 @@
 <div ng-controller="MetricOptionsController" class="component-inner">
     <input type="hidden" value="{{metric.metric}}" />
-    {{metric.metric}}
-    <div metric-group></div>
+
+    <table class="table table-condensed">
+        <thead>
+        <tr>
+            <th colspan="2">Tag Filters</th>
+            <td style="width: 20px;"><a ng-click="addFilter()" class="text-success btn-xs"><span class="glyphicon glyphicon-plus"></span></a></td>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="(key, filter) in filters">
+            <td>
+                <input class="form-control input-sm" ng-model="filter.tag" />
+            </td>
+            <td>
+                <input type="text" ng-model="filter.value" typeahead="result for result in tagValues($viewValue) | limitTo:8" class="form-control input-sm">
+            </td>
+            <th style="vertical-align: middle;"><a class="text-danger btn-xs"><span class="glyphicon glyphicon-remove" ng-click="removeFilter(key)"></span></a></th>
+        </tr>
+        </tbody>
+    </table>
+
+    <table class="table table-condensed">
+        <thead>
+            <tr>
+                <th colspan="2">Groupings</th>
+                <td style="width: 20px;"><a class="text-success btn-xs"><span class="glyphicon glyphicon-plus"></span></a></td>
+            </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>Tags</td>
+            <td><input class="form-control input-sm" /></td>
+            <th style="vertical-align: middle;"><a class="text-danger btn-xs"><span class="glyphicon glyphicon-remove"></span></a></th>
+        </tr>
+        </tbody>
+    </table>
+
+    <table class="table table-condensed">
+        <thead>
+        <tr>
+            <th colspan="2">Aggregators</th>
+            <td style="width: 20px;"><a class="text-success btn-xs"><span class="glyphicon glyphicon-plus"></span></a></td>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>Tags</td>
+            <td><input class="form-control input-sm" /></td>
+            <th style="vertical-align: middle;"><a class="text-danger btn-xs"><span class="glyphicon glyphicon-remove"></span></a></th>
+        </tr>
+        </tbody>
+    </table>
+
+
 
 </div>

@@ -11,7 +11,9 @@ module.exports = function(grunt) {
                       'bower_components/jquery/dist/jquery.min.js',
                       'bower_components/angular/angular.min.js',
                       'bower_components/angular-tree-control/angular-tree-control.js',
-                      'bower_components/golden-layout/dist/goldenlayout.min.js',
+                      'bower_components/angular-ui-bootstrap/ui-bootstrap-0.11.2.min.js',
+                      'bower_components/angular-ui-bootstrap/ui-bootstrap-tpls-0.11.2.min.js',
+                      'bower_components/golden-layout/dist/goldenlayout.min.js'
                   ],
                   'dist/vendor.css': [
                       'bower_components/angular-tree-control/css/tree-control.css'
