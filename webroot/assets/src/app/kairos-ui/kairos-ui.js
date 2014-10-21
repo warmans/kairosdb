@@ -1,5 +1,101 @@
 (function() {
 
+    //----------------------------------------------------------------------------------------------------------------
+    // Layout Manager
+    //----------------------------------------------------------------------------------------------------------------
+    var myLayout = new GoldenLayout({
+        settings: {
+
+        },
+        content:[{
+            type: 'row',
+            content: [{
+                type: 'column',
+                isClosable: false,
+                width: 20,
+                content: [{
+                    type: 'stack',
+                    isClosable: false,
+                    id: 'query-builder',
+                    content: [{
+                        title: 'Range',
+                        type: 'component',
+                        isClosable: false,
+                        componentName: 'angularModule',
+                        componentState: {
+                            module: 'kairos-ui',
+                            templatePath: '/assets/src/app/kairos-ui/view/date-selector.html'
+                        }
+                    },{
+                        title: 'Metrics',
+                        type: 'component',
+                        isClosable: false,
+                        componentName: 'angularModule',
+                        componentState: {
+                            module: 'kairos-ui',
+                            templatePath: '/assets/src/app/kairos-ui/view/metric-selector.html'
+                        }
+                    }]
+                },{
+                    type: 'stack',
+                    isClosable: false,
+                    content: []
+                },{
+                    title: 'Actions',
+                    type: 'component',
+                    isClosable: false,
+                    componentName: 'angularModule',
+                    height: 15,
+                    id: 'actions-panel',
+                    componentState: {
+                        module: 'kairos-ui',
+                        templatePath: '/assets/src/app/kairos-ui/view/actions.html'
+                    }
+                }]
+            },{
+                type: 'stack',
+                isClosable: false,
+                content: [{
+                    title: 'Help',
+                    type: 'component',
+                    isClosable: false,
+                    componentName: 'placeholderModule',
+                    componentState: {
+                        text: 'help text'
+                    }
+                }]
+            }]
+        }]
+    });
+
+    myLayout.registerComponent('angularModule', function(container, state) {
+
+        var element = container.getElement();
+        element.html('<div ng-include="\'' + state.templatePath + '\'"></div>');
+
+        if (state.compiler) {
+            state.compiler(element.contents())(state.scope);
+        }
+    });
+
+
+    myLayout.registerComponent('placeholderModule', function(container, state) {
+        container.getElement().html('<div class="component-inner">'+state.text+'</div>');
+    });
+
+
+    myLayout.on( 'componentCreated', function(component){
+
+        //hacky way to remove header from panel
+        if (component.config.id === 'actions-panel') {
+            component.parent.header.element.hide();
+        }
+    });
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // Angular Appliction
+    // ---------------------------------------------------------------------------------------------------------------
+
     var app = angular.module('kairos-ui', ['treeControl', 'kairos-api', 'ui.bootstrap']);
 
     app.directive('metricGroup', function() {
@@ -14,15 +110,50 @@
         };
     })
 
-    app.controller('QueryBuilderController', ['$scope', 'container', 'state', function( $scope, container, state ) {
+    app.service('query', function() {
 
-        $scope.date_range_type = 'relative';
+        var query = {};
+
+        query.setDateAbsolute = function (start_val, end_val) {
+            query.start_absolute = start_val;
+            query.end_absolute = end_val;
+        };
+
+        query.setDateRelative = function (start_unit, start_val, end_unit, end_val) {
+            query.start_relative = {unit: start_unit, value: start_val};
+            query.end_relative = {unit: end_unit, value: end_val};
+        };
+
+        return query;
+    });
+
+    app.controller('QueryBuilderController', ['$scope', 'query', function($scope, query) {
+
+        $scope.range = {type: 'relative', start_absolute: '', end_absolute: '', start_relative_unit: ''};
+
+        var updateDateSelection = function () {
+            console.log($scope.range.type);
+            if ($scope.range.type === 'absolute') {
+                query.setDateAbsolute($scope.range.start_absolute, $scope.range.end_absolute);
+            } else {
+                query.setDateRelative($scope.range.start_relative_unit, $scope.range.start_relative_val, $scope.range.end_relative_unit, $scope.range.end_relative_value);
+            }
+            console.log(query);
+        };
+
+        $scope.$watch('range.start_absolute', updateDateSelection);
+        $scope.$watch('range.end_absolute', updateDateSelection);
 
     }]);
 
-    app.controller('MetricOptionsController', ['$scope', 'container', 'state', function( $scope, container, state ) {
+    app.controller('MetricOptionsController', ['$scope', 'kapi', function($scope, kapi) {
 
         $scope.filters = [];
+        $scope.tags = [];
+
+        kapi.getTags({}, function(){
+
+        });
 
         $scope.addFilter = function() {
             $scope.filters.push({"tag": "", "value": ""});
@@ -36,11 +167,9 @@
             return ['tag1']
         };
 
-        $scope.metric = state.metric;
-
     }]);
 
-    app.controller('MetricSelectionController', ['$scope', 'container', 'state', 'kapi', function( $scope, container, state, kapi) {
+    app.controller('MetricSelectionController', ['$scope', '$compile', 'kapi', 'query', function($scope, $compile,  kapi, query) {
 
         $scope.metricTree = [];
 
@@ -90,29 +219,28 @@
 
         $scope.metricTreeFilter = '';
 
-        $scope.addMetric = function(selectedMetric) {
+        $scope.addMetric = function (selectedMetric) {
 
             var newItemConfig = {
                 title: selectedMetric["metric"],
                 type: 'component',
                 componentName: 'angularModule',
-                id: selectedMetric["metric"],
                 componentState: {
-                    module: 'kairos-ui',
-                    templatePath: '/assets/src/app/kairos-ui/view/metric-options.html',
-                    metric: selectedMetric
+                    compiler: $compile,
+                    scope: $scope,
+                    templatePath: '/assets/src/app/kairos-ui/view/metric-options.html'
                 }
             };
 
-            container.layoutManager.root.contentItems[0].contentItems[0].contentItems[1].addChild( newItemConfig );
+            myLayout.root.contentItems[0].contentItems[0].contentItems[1].addChild(newItemConfig);
         };
     }]);
 
-    app.controller('QueryResultController', ['$scope', '$timeout', 'container', 'state', function( $scope, $timeout, container, state ) {
+    app.controller('QueryResultController', ['$scope', function( $scope) {
 
     }]);
 
-    app.controller('ActionsController', ['$scope', 'container', 'state', function( $scope, container, state ) {
+    app.controller('ActionsController', ['$scope', 'query', function( $scope, query ) {
         $scope.runQuery = function() {
 
             var newItemConfig = {
@@ -121,113 +249,17 @@
                 componentName: 'angularModule',
                 componentState: {
                     module: 'kairos-ui',
-                    templatePath: '/assets/src/app/kairos-ui/view/query-result.html'
+                    templatePath: '/assets/src/app/kairos-ui/view/query-result.html',
+                    query: query.exportQuery()
                 }
             };
 
-            container.layoutManager.root.contentItems[0].contentItems[1].addChild( newItemConfig );
+            myLayout.root.contentItems[0].contentItems[1].addChild(newItemConfig);
         };
     }]);
 
-    var myLayout = new GoldenLayout({
-        settings: {
-
-        },
-        content:[{
-            type: 'row',
-            content: [{
-                type: 'column',
-                isClosable: false,
-                width: 20,
-                content: [{
-                    type: 'stack',
-                    isClosable: false,
-                    id: 'query-builder',
-                    content: [{
-                        title: 'Range',
-                        type: 'component',
-                        isClosable: false,
-                        componentName: 'angularModule',
-                        componentState: {
-                            module: 'kairos-ui',
-                            templatePath: '/assets/src/app/kairos-ui/view/date-selector.html'
-                        }
-                    },{
-                        title: 'Metrics',
-                        type: 'component',
-                        isClosable: false,
-                        componentName: 'angularModule',
-                        componentState: {
-                            module: 'kairos-ui',
-                            templatePath: '/assets/src/app/kairos-ui/view/metric-selector.html'
-                        }
-                    }]
-                },{
-                    type: 'stack',
-                    isClosable: false,
-                    content: [{
-                        title: 'Placeholder',
-                        type: 'component',
-                        isClosable: false,
-                        componentName: 'angularModule',
-                        componentState: {
-                            module: 'kairos-ui',
-                            templatePath: '/assets/src/app/kairos-ui/view/metric-options.html'
-                        }
-                    }]
-                },{
-                    title: 'Actions',
-                    type: 'component',
-                    isClosable: false,
-                    componentName: 'angularModule',
-                    height: 15,
-                    id: 'actions-panel',
-                    componentState: {
-                        module: 'kairos-ui',
-                        templatePath: '/assets/src/app/kairos-ui/view/actions.html'
-                    }
-                }]
-            },{
-                type: 'stack',
-                isClosable: false,
-                content: [{
-                    title: 'Help',
-                    type: 'component',
-                    isClosable: false,
-                    componentName: 'placeholderModule',
-                    componentState: {
-                        text: 'help text'
-                    }
-                }]
-            }]
-        }]
-    });
-
-    myLayout.registerComponent('angularModule', function(container, state) {
-
-        var element = container.getElement();
-        element.html('<div ng-include="\'' + state.templatePath + '\'"></div>');
-
-        angular
-            .module( state.module )
-            .value( 'container', container )
-            .value( 'state', state );
-
-        angular.bootstrap( element[ 0 ], [ state.module ] );
-    });
-
-
-    myLayout.registerComponent('placeholderModule', function(container, state) {
-        container.getElement().html('<div class="component-inner">'+state.text+'</div>');
-    });
-
-
-    myLayout.on( 'componentCreated', function(component){
-
-        //hacky way to remove header from panel
-        if (component.config.id === 'actions-panel') {
-            component.parent.header.element.hide();
-        }
+    myLayout.on( 'initialised', function(){
+        angular.bootstrap( document.body, [ 'kairos-ui' ]);
     });
 
     myLayout.init();

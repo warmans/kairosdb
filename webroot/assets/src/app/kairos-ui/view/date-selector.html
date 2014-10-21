@@ -2,30 +2,30 @@
     <form role="form">
         <div class="form-group">
             <label>Type:</label>
-            <select class="form-control input-sm" ng-model="date_range_type">
+            <select class="form-control input-sm" ng-model="range.type">
                 <option value="relative">Relative</option>
                 <option value="absolute">Absolute</option>
             </select>
         </div>
-        <div ng-show="date_range_type === 'absolute'">
+        <div ng-show="range.type === 'absolute'">
             <div class="form-group">
                 <label for="from-abs">From:</label>
-                <input type="text" class="form-control input-sm" id="from-abs" name="from-abs" placeholder="2014-01-01">
+                <input type="text" class="form-control input-sm" id="from-abs" name="from-abs" placeholder="2014-01-01" ng-model="range.start_absolute">
             </div>
             <div class="form-group">
                 <label for="to-abs">To:</label>
-                <input type="text" class="form-control input-sm" id="to-abs" name="to-abs" placeholder="2014-01-01">
+                <input type="text" class="form-control input-sm" id="to-abs" name="to-abs" placeholder="2014-01-01" ng-model="range.end_absolute">
             </div>
         </div>
-        <div ng-show="date_range_type === 'relative'">
+        <div ng-show="range.type === 'relative'">
             <label>From:</label>
             <div class="row form-group">
                 <div class="col-lg-2">
-                    <input type="text"  class="form-control input-sm" id="from-rel-interval" name="from-rel-unit" placeholder="e.g. 1" value="1">
+                    <input type="text"  class="form-control input-sm" id="from-rel-interval" name="from-rel-unit" placeholder="e.g. 1" value="1" ng-model="range.start_relative_val">
                 </div>
                 <div class="col-lg-10">
                     <div class="input-group">
-                        <select class="form-control input-sm" id="from-rel-unit" name="from-rel-unit">
+                        <select class="form-control input-sm" id="from-rel-unit" name="from-rel-unit" ng-model="range.start_relative_unit">
                             <option value="seconds">Seconds</option>
                             <option value="minutes">Minutes</option>
                             <option selected value="hours">Hours</option>
@@ -38,11 +38,11 @@
             <label>To:</label>
             <div class="row form-group">
                 <div class="col-lg-2">
-                    <input type="text" class="form-control input-sm" id="to-rel-interval" name="to-rel-unit">
+                    <input type="text" class="form-control input-sm" id="to-rel-interval" name="to-rel-unit" ng-model="range.end_relative_val">
                 </div>
                 <div class="col-lg-10">
                     <div class="input-group">
-                        <select class="form-control input-sm" id="to-rel-unit" name="from-rel-unit">
+                        <select class="form-control input-sm" id="to-rel-unit" name="from-rel-unit" ng-model="range.end_relative_unit">
                             <option value="seconds">Seconds</option>
                             <option value="minutes">Minutes</option>
                             <option selected value="hours">Hours</option>
