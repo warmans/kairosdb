@@ -6,6 +6,18 @@
 
         var kapi = {};
 
+        //Values used for Aggregator sampling and Relative time
+        kapi.units = {
+            MILLISECONDS:   "Milliseconds",
+            SECONDS:        "Seconds",
+            MINUTES:        "Minutes",
+            HOURS:          "Hours",
+            DAYS:           "Days",
+            WEEKS:          "Weeks",
+            MONTHS:         "Months",
+            YEARS:          "Years"
+        };
+
         kapi.getMetricNames = function (successCallback, errorCallback) {
 
             var errorCallback = errorCallback ? errorCallback : console.log;
@@ -29,8 +41,8 @@
             $http
                 .post("/api/v1/datapoints/query/tags", query)
                 .success(function (data) {
-                    if (data.results) {
-                        successCallback(data.results);
+                    if (data.queries) {
+                        successCallback(data.queries);
                     } else {
                         errorCallback(data);
                     }

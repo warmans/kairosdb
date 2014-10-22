@@ -11,10 +11,10 @@
         <tbody>
         <tr ng-repeat="(key, filter) in filters">
             <td>
-                <input class="form-control input-sm" ng-model="filter.tag" />
+                <select class="form-control input-sm" ng-model="filter.tag" ng-options="key as key for (key, value) in tags"></select>
             </td>
             <td>
-                <input type="text" ng-model="filter.value" typeahead="result for result in tagValues($viewValue) | limitTo:8" class="form-control input-sm">
+                <input type="text" ng-model="filter.value" typeahead="result for result in tagValues(filter, $viewValue) | limitTo:8" class="form-control input-sm">
             </td>
             <th style="vertical-align: middle;"><a class="text-danger btn-xs"><span class="glyphicon glyphicon-remove" ng-click="removeFilter(key)"></span></a></th>
         </tr>
@@ -52,7 +52,4 @@
         </tr>
         </tbody>
     </table>
-
-
-
 </div>
